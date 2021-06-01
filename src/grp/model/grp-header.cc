@@ -5,11 +5,14 @@
 #include "ns3/log.h"
 #include "grp-header.h"
 
-#define GRP_DATA_PKT_HEADER_SIZE 3
+#define GRP_DATA_PKT_HEADER_SIZE 4
 #define GRP_CTR_PKT_HEADER_SIZE 4
 #define GRP_BLOCK_PKT_HEADER_SIZE 24
 #define GRP_MSG_HEADER_SIZE 12
 #define IPV4_ADDRESS_SIZE 4
+#define GRP_COLLECT_PKT_HEADER_SIZE 43
+#define GRP_RS_PKT_HEADER_SIZE 37
+
 
 namespace ns3 {
 
@@ -43,7 +46,7 @@ uint8_t SecondsToEmf (double seconds)
 
 double EmfToSeconds (uint8_t grpFormat)
 {
-  int a = (grpFormat >> 4);
+  int a = (grpFormat >> 4);//右移
   int b = (grpFormat & 0xf);
   return GRP_C * (1 + a / 16.0) * (1 << b);
 }
@@ -141,6 +144,79 @@ BlockPacketHeader::Deserialize(Buffer::Iterator start)
 	return GetSerializedSize ();
 }
 
+// /// ----------------- GRP Collector Packet ---------------------------------
+// NS_OBJECT_ENSURE_REGISTERED (CollectPacketHeader);
+
+// CollectPacketHeader::CollectPacketHeader()
+// {
+
+// }
+
+// CollectPacketHeader::~CollectPacketHeader()
+// {
+
+// }
+
+// TypeId
+// CollectPacketHeader::GetTypeId()
+// {
+// 	static TypeId tid = TypeId("ns3::grp::CollectPacketHeader")
+// 			.SetParent<Header>()
+// 			.SetGroupName("grp")
+// 			.AddConstructor<CollectPacketHeader>()
+// 			;
+// 	return tid;
+// }
+
+// TypeId
+// CollectPacketHeader::GetInstanceTypeId() const
+// {
+// 	return GetTypeId();
+// }
+
+// void
+// CollectPacketHeader::Print(std::ostream &os) const
+// {
+
+// }
+
+// uint32_t
+// CollectPacketHeader::GetSerializedSize() const
+// {
+// 	return GRP_BLOCK_PKT_HEADER_SIZE;
+// }
+
+// void
+// CollectPacketHeader::Serialize(Buffer::Iterator start) const
+// {
+// 	Buffer::Iterator i = start;
+//     i.WriteU32(CF_addr.Get());
+//     i.WriteU32(NF_addr.Get());
+// 	i.WriteU64(IVD_density);
+//     i.WriteU64(DVD_density);
+// 	i.WriteU32(roadID);
+// 	i.WriteU64(VPV_ValidityPeriodValue);
+//     i.WriteU64(NumberOfHops);
+//     i.WriteU32(OriginalityFlag);
+//     i.writeU64(TimeStamp);
+// }
+
+// uint32_t
+// CollectPacketHeader::Deserialize(Buffer::Iterator start)
+// {
+// 	Buffer::Iterator i = start;
+//     CF_addr = Ipv4Address (i.ReadU32 ());
+//     NF_addr = Ipv4Address (i.ReadU32 ());
+//     IVD_density = i.ReadU64();
+//     DVD_density = i.ReadU64();
+// 	roadID = i.ReadU32();
+// 	VPV_ValidityPeriodValue = i.ReadU64();
+//     NumberOfHops = i.ReadU64();
+//     OriginalityFlag = i.ReadU32();
+//     TimeStamp = i.ReadU64();
+// 	return GetSerializedSize ();
+// }
+
 
 
 //// ---------------- GRP Controll Packet -------------------------------
@@ -178,7 +254,7 @@ CtrPacketHeader::GetSerializedSize (void) const
 }
 
 void
-CtrPacketHeader::Print (std::ostream &os) const
+CtrPacketHeader::Print (std::ostream &os) const//使用此方法将标头的内容作为ASCII数据打印到c ++输出流
 {
   /// \todo
 }
@@ -244,6 +320,7 @@ DataPacketHeader::Serialize (Buffer::Iterator start) const
   Buffer::Iterator i = start;
   i.WriteU8 (nextjid);
   i.WriteU16 (sender);
+  i.WriteU8(fromjid);
 }
 
 uint32_t
@@ -252,6 +329,7 @@ DataPacketHeader::Deserialize (Buffer::Iterator start)
   Buffer::Iterator i = start;
   nextjid  = i.ReadU8 ();
   sender = i.ReadU16 ();
+  fromjid=i.ReadU8 ();
   return GetSerializedSize ();
 }
 
@@ -294,6 +372,14 @@ MessageHeader::GetSerializedSize (void) const
       NS_LOG_DEBUG ("Hello Message Size: " << size << " + " << m_message.hello.GetSerializedSize ());
       size += m_message.hello.GetSerializedSize ();
       break;
+    case CollectPacket_MESSAGE:
+      NS_LOG_DEBUG ("CollectPacket Message Size: " << size << " + " << m_message.cp.GetSerializedSize ());
+      size += m_message.cp.GetSerializedSize ();
+      break;
+    case RTNSMResult_MESSAGE:
+      NS_LOG_DEBUG ("RTNSMResult Message Size: " << size << " + " << m_message.RS.GetSerializedSize ());
+      size += m_message.RS.GetSerializedSize ();
+      break;
     default:
       NS_ASSERT (false);
     }
@@ -323,6 +409,12 @@ MessageHeader::Serialize (Buffer::Iterator start) const
     case HELLO_MESSAGE:
       m_message.hello.Serialize (i);
       break;
+    case CollectPacket_MESSAGE:
+      m_message.cp.Serialize (i);
+      break;
+    case RTNSMResult_MESSAGE:
+      m_message.RS.Serialize (i);
+      break;
     default:
       NS_ASSERT (false);
     }
@@ -335,7 +427,7 @@ MessageHeader::Deserialize (Buffer::Iterator start)
   uint32_t size;
   Buffer::Iterator i = start;
   m_messageType  = (MessageType) i.ReadU8 ();
-  NS_ASSERT (m_messageType >= HELLO_MESSAGE && m_messageType <= CPACK_MESSAGE);
+  NS_ASSERT (m_messageType >= HELLO_MESSAGE && m_messageType <= RTNSMResult_MESSAGE);
   m_vTime  = i.ReadU8 ();
   m_messageSize  = i.ReadU16 ();
   m_originatorAddress = Ipv4Address (i.ReadU32 ());
@@ -348,6 +440,12 @@ MessageHeader::Deserialize (Buffer::Iterator start)
     case HELLO_MESSAGE:
       size += m_message.hello.Deserialize (i, m_messageSize - GRP_MSG_HEADER_SIZE);
       break;
+    case CollectPacket_MESSAGE:
+      size += m_message.cp.Deserialize (i, m_messageSize - GRP_MSG_HEADER_SIZE);
+      break;
+    case RTNSMResult_MESSAGE:
+      size += m_message.RS.Deserialize (i, m_messageSize - GRP_MSG_HEADER_SIZE);
+      break; 
     default:
       NS_ASSERT (false);
     }
@@ -455,6 +553,102 @@ MessageHeader::Hello::Deserialize (Buffer::Iterator start, uint32_t messageSize)
     this->bsize = messageSize;
     this->asize = messageSize - basesize - this->neighborInterfaceAddresses.size() * IPV4_ADDRESS_SIZE;
 
+    return GetSerializedSize ();
+}
+
+// ---------------- GRP CollectPacket Message -------------------------------
+
+uint32_t
+MessageHeader::CollectPacket::GetSerializedSize (void) const
+{
+    return GRP_COLLECT_PKT_HEADER_SIZE;
+}
+
+void
+MessageHeader::CollectPacket::Print (std::ostream &os) const
+{
+}
+
+void
+MessageHeader::CollectPacket::Serialize (Buffer::Iterator start) const
+{
+    Buffer::Iterator i = start;
+
+    i.WriteU32(this->CF_addr.Get());
+    i.WriteU32(this->NF_addr.Get());
+	i.WriteU32(this->IVD_density);
+    i.WriteU32(this->DVD_density);
+    i.WriteU32(this->first_JID);
+    i.WriteU32(this->sencond_JID);
+	i.WriteU32(this->roadID);
+	i.WriteU32(this->VPV_ValidityPeriodValue);
+    i.WriteU32(this->VPV_ValidityPeriodValueFpart);
+    i.WriteU32(this->NumberOfHops);
+    i.WriteU16(this->OriginalityFlag);
+    i.WriteU8(this->TimeStamp);
+
+}
+
+uint32_t
+MessageHeader::CollectPacket::Deserialize (Buffer::Iterator start, uint32_t messageSize)
+{
+    Buffer::Iterator i = start;
+    this->CF_addr = Ipv4Address (i.ReadU32 ());
+    this->NF_addr = Ipv4Address (i.ReadU32 ());
+    this->IVD_density = i.ReadU32();
+    this->DVD_density = i.ReadU32();
+    this->first_JID= i.ReadU32();
+    this->sencond_JID= i.ReadU32();
+	this->roadID = i.ReadU32();
+	this->VPV_ValidityPeriodValue = i.ReadU32();
+    this->VPV_ValidityPeriodValueFpart= i.ReadU32();
+    this->NumberOfHops = i.ReadU32();
+    this->OriginalityFlag = i.ReadU16();
+    this->TimeStamp = i.ReadU8();
+    return GetSerializedSize ();
+}
+
+// ---------------- GRP RTNSMResult Message -------------------------------
+
+uint32_t
+MessageHeader::RTNSMResult::GetSerializedSize (void) const
+{
+    return GRP_RS_PKT_HEADER_SIZE;
+}
+
+void
+MessageHeader::RTNSMResult::Print (std::ostream &os) const
+{
+}
+
+void
+MessageHeader::RTNSMResult::Serialize (Buffer::Iterator start) const
+{
+    Buffer::Iterator i = start;
+
+    i.WriteU32(this->firstJID);
+    i.WriteU32(this->sencondJID);
+	i.WriteU64(this->RTNSMRS);
+    i.WriteU64(this->RTNSMRS_Fpart);
+    i.WriteU8(this->TimeStamp);
+    i.WriteU32(this->VP);
+    i.WriteU32(this->VP_Fpart);
+    i.WriteU32(this->RSFlag);
+}
+
+
+uint32_t
+MessageHeader::RTNSMResult::Deserialize (Buffer::Iterator start, uint32_t messageSize)
+{
+    Buffer::Iterator i = start;
+    this->firstJID = i.ReadU32 ();
+    this->sencondJID = i.ReadU32 ();
+    this->RTNSMRS = i.ReadU64();
+    this->RTNSMRS_Fpart = i.ReadU64();
+    this->TimeStamp = i.ReadU8();
+    this->VP=i.ReadU32 ();
+    this->VP_Fpart=i.ReadU32 ();
+    this->RSFlag=i.ReadU32 ();
     return GetSerializedSize ();
 }
 

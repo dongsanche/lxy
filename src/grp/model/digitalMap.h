@@ -21,15 +21,15 @@ struct VTrace
 };
 
 
-struct DigitalMapEntry
+struct DigitalMapEntry//数字地图入口
 {
 	float x;
 	float y;
 	int edgeNum;
-	std::map<int, std::vector<float>> outedge;
+	std::map<int, std::vector<float>> outedge;//int作为索引，关联指向std::vector<float>的指针 outedge
 };
 
-struct EdgeListEntry
+struct EdgeListEntry//边表入口
 {
 	int a;
 	int b;
@@ -39,9 +39,9 @@ class DigitalMap
 {
 public:
 	DigitalMap();
-	virtual ~DigitalMap();
+	virtual ~DigitalMap();//虚拟函数
 
-	void setMapFilePath(std::string path);
+	void setMapFilePath(std::string path);//设置映射文件路径
 	void readMapFromCsv(std::vector<DigitalMapEntry>& m_map);
 
 	void readTraceFromCsv(std::string path, double xn, double yn, int vid);

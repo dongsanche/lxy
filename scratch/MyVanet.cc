@@ -23,6 +23,7 @@
 #include "ns3/csma-module.h"
 #include "ns3/node-list.h"
 #include "ns3/node.h"
+#include "grp.h"
 #include <vector>
 #include <queue>
 #include <cstdlib>
@@ -532,7 +533,7 @@ int main (int argc, char *argv[])
     //设置仿真时间
     SimulationStopTime = 160;
     //在指定时间指定发送节点向指定目标节点发送一个数据包，用以测试算法正确性
-	// Simulator::Schedule(Seconds(27.5), &SendSpecificPacket, 179, nNodes);	
+	//Simulator::Schedule(Seconds(27.5), &SendSpecificPacket, 179, nNodes);	
     //大规模发包测试，指定传输开始时间，具体的发送方式可以只有指定，当前文件前面定义呢多个测试函数，见上	
     Simulator::Schedule(Seconds(20), &SendTestPacketToLC_DIS);     							
 
@@ -571,6 +572,7 @@ int main (int argc, char *argv[])
     NS_LOG_UNCOND("Sent:"<< SendCount << " Received:" << recount 
 		<< " Drop:" << DropCount << " delay:" << (double)allTime/recount/1000000 << "ms");
     NS_LOG_UNCOND("Store Error: " << lc - DropCount);
+    NS_LOG_UNCOND("controlnum: " << controlnum);
 
     //将统计数据输出到文件中
     std::ofstream fout("scratch/data.csv", std::ios::app);
@@ -578,6 +580,7 @@ int main (int argc, char *argv[])
     fout << (recount * 1.0 / SendCount) << "," << (double)allTime/recount/1000000;
 
     fout << std::endl;
+    //std::cout<<controlnum<<std::endl;
     fout.close();
 
 

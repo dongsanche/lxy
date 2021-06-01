@@ -19,32 +19,32 @@ void DigitalMap::setMapFilePath(std::string path)
 
 void DigitalMap::readMapFromCsv(std::vector<DigitalMapEntry>& m_map)
 {
-	std::ifstream file(m_path);
+	std::ifstream file(m_path);//以输入方式打开文件
 	std::string line;
 
 	while(!file.eof())
 	{
-		std::getline(file, line);
+		std::getline(file, line);//file是正在读取的数据流，line是接收字符串的string变量名
 
-		std::istringstream iss(line);
+		std::istringstream iss(line);//以空格分割字符串
 		std::string temp;
 
 		int i = 0, num = 0;
 		DigitalMapEntry entry;
 		while (std::getline(iss, temp, ','))
 		{
-			std::string value = std::move(temp);
+			std::string value = std::move(temp);//将temp掏空到value
 			if (i == 1)
-				entry.x = atof(value.c_str());
+				entry.x = atof(value.c_str());//字符串转换为浮点数
 			else if (i == 2)
 				entry.y = atof(value.c_str());
 			else if (i == 3)
 			{
-				num = atoi(value.c_str());
+				num = atoi(value.c_str());//将字符串转换为整型数
 				entry.edgeNum = num;
 				while(num > 0)
 				{
-					// next junction index
+					// next junction index//交叉路口
 					std::getline(iss, temp, ',');
 					value = std::move(temp);
 					int next = atoi(value.c_str());
@@ -63,7 +63,7 @@ void DigitalMap::readMapFromCsv(std::vector<DigitalMapEntry>& m_map)
 					// the weight of the edge
 					edgeInfo.push_back(atof("0"));
 
-					entry.outedge.insert(std::make_pair(next, edgeInfo));
+					entry.outedge.insert(std::make_pair(next, edgeInfo));//将两个值视为一个单元
 
 					num--;
 				}
