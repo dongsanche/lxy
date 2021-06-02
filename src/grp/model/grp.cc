@@ -91,7 +91,7 @@ namespace ns3
             m_positionCheckTimer.SetFunction(&RoutingProtocol::CheckPositionExpire, this);
             m_speedTimer.SetFunction(&RoutingProtocol::SpeedCheckExpire, this);
             m_queuedMessagesTimer.SetFunction(&RoutingProtocol::SendQueuedMessages, this);
-            m_RSTimer.SetFunction(&RoutingProtocol::RSExpire, this);
+            // m_RSTimer.SetFunction();
 
             m_packetSequenceNumber = GRP_MAX_SEQ_NUM;
             m_messageSequenceNumber = GRP_MAX_SEQ_NUM;
@@ -452,18 +452,18 @@ namespace ns3
                                  << " received HELLO message of size " << messageHeader.GetSerializedSize());
                     ProcessHello(messageHeader, receiverIfaceAddr, senderIfaceAddr);
                     break;
-                case grp::MessageHeader::CollectPacket_MESSAGE:
-                    NS_LOG_DEBUG(Simulator::Now().GetSeconds()
-                                 << "s GRP node " << m_mainAddress
-                                 << " received collect packet of size " << messageHeader.GetSerializedSize());
-                    ProcessCollectPacket(messageHeader, receiverIfaceAddr, senderIfaceAddr);
-                    break;
-                case grp::MessageHeader::RTNSMResult_MESSAGE:
-                    NS_LOG_DEBUG(Simulator::Now().GetSeconds()
-                                 << "s GRP node " << m_mainAddress
-                                 << " received collect packet of size " << messageHeader.GetSerializedSize());
-                    ProcessRTNSMResult(messageHeader, receiverIfaceAddr, senderIfaceAddr);
-                    break;
+                // case grp::MessageHeader::CollectPacket_MESSAGE:
+                //     NS_LOG_DEBUG(Simulator::Now().GetSeconds()
+                //                  << "s GRP node " << m_mainAddress
+                //                  << " received collect packet of size " << messageHeader.GetSerializedSize());
+                //     ProcessCollectPacket(messageHeader, receiverIfaceAddr, senderIfaceAddr);
+                //     break;
+                // case grp::MessageHeader::RTNSMResult_MESSAGE:
+                //     NS_LOG_DEBUG(Simulator::Now().GetSeconds()
+                //                  << "s GRP node " << m_mainAddress
+                //                  << " received collect packet of size " << messageHeader.GetSerializedSize());
+                //     ProcessRTNSMResult(messageHeader, receiverIfaceAddr, senderIfaceAddr);
+                //     break;
                 default:
                     NS_LOG_DEBUG("GRP message type " << int(messageHeader.GetMessageType()) << " not implemented");
                 }
@@ -489,102 +489,170 @@ namespace ns3
             }
         }
 
-        void
-        RoutingProtocol::CheckPacketQueue() //检查车辆是否携带有缓存数据包
-        {
-            m_pqueue.assign(m_pwaitqueue.begin(), m_pwaitqueue.end()); //把begin和end之间的数据赋值给m_pqueue
-            m_pwaitqueue.clear();
+        // void
+        // RoutingProtocol::CheckPacketQueue() //检查车辆是否携带有缓存数据包
+        // {
+        //     m_pqueue.assign(m_pwaitqueue.begin(), m_pwaitqueue.end()); //把begin和end之间的数据赋值给m_pqueue
+        //     m_pwaitqueue.clear();
 
-            while (m_pqueue.empty() == false)
-            {
-                PacketQueueEntry qentry = m_pqueue.back();
-                m_pqueue.pop_back();
+        //     while (m_pqueue.empty() == false)
+        //     {
+        //         PacketQueueEntry qentry = m_pqueue.back();
+        //         m_pqueue.pop_back();
 
-                Ipv4Address dest = qentry.m_header.GetDestination();
-                Ipv4Address origin = qentry.m_header.GetSource();
+        //         Ipv4Address dest = qentry.m_header.GetDestination();
+        //         Ipv4Address origin = qentry.m_header.GetSource();
 
-                QPacketInfo pInfo(origin, dest);                      //？
-                QMap::const_iterator pItr = m_wTimeCache.find(pInfo); //返回迭代器
-                if (pItr != m_wTimeCache.end() && Simulator::Now().GetSeconds() - pItr->second.GetSeconds() >= CarryTimeThreshold)
-                {
-                    NS_LOG_UNCOND("Store time more than: " << CarryTimeThreshold << "s.");
-                    m_DropPacketTrace(qentry.m_header);
-                    m_wTimeCache.erase(pInfo);
-                    continue;
-                }
+        //         QPacketInfo pInfo(origin, dest);                      //？
+        //         QMap::const_iterator pItr = m_wTimeCache.find(pInfo); //返回迭代器
+        //         if (pItr != m_wTimeCache.end() && Simulator::Now().GetSeconds() - pItr->second.GetSeconds() >= CarryTimeThreshold)
+        //         {
+        //             NS_LOG_UNCOND("Store time more than: " << CarryTimeThreshold << "s.");
+        //             m_DropPacketTrace(qentry.m_header);
+        //             m_wTimeCache.erase(pInfo);
+        //             continue;
+        //         }
 
-                grp::DataPacketHeader DataPacketHeader;
-                qentry.m_packet->RemoveHeader(DataPacketHeader);
-                int nextjid = (int)DataPacketHeader.GetNextJID();
-                int fromjid=(int)DataPacketHeader.GetFromJID();
+        //         grp::DataPacketHeader DataPacketHeader;
+        //         qentry.m_packet->RemoveHeader(DataPacketHeader);
+        //         int nextjid = (int)DataPacketHeader.GetNextJID();
+        //         int fromjid=(int)DataPacketHeader.GetFromJID();
 
-                Ipv4Address loopback("127.0.0.1");
-                Ipv4Address nextHop("127.0.0.1");
+        //         Ipv4Address loopback("127.0.0.1");
+        //         Ipv4Address nextHop("127.0.0.1");
 
-                Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>();
-                double cx = MM->GetPosition().x;
-                double cy = MM->GetPosition().y;
-                double dx = GetPosition(dest).x;
-                double dy = GetPosition(dest).y;
-                double cjx = m_map[m_currentJID].x;
-                double cjy = m_map[m_currentJID].y;
-                double njx = m_map[m_nextJID].x;
-                double njy = m_map[m_nextJID].y;
-                double curDisToDst = sqrt(pow(cx - dx, 2) + pow(cy - dy, 2));  //当前车辆距离dest的距离
-                double curJTODst = sqrt(pow(cjx - dx, 2) + pow(cjy - dy, 2));  //currentJID距离dest的距离
-                double nextJTODst = sqrt(pow(njx - dx, 2) + pow(njy - dy, 2)); //nextJID距离dest的距离
+        //         Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>();
+        //         double cx = MM->GetPosition().x;
+        //         double cy = MM->GetPosition().y;
+        //         double dx = GetPosition(dest).x;
+        //         double dy = GetPosition(dest).y;
+        //         double cjx = m_map[m_currentJID].x;
+        //         double cjy = m_map[m_currentJID].y;
+        //         double njx = m_map[m_nextJID].x;
+        //         double njy = m_map[m_nextJID].y;
+        //         double curDisToDst = sqrt(pow(cx - dx, 2) + pow(cy - dy, 2));  //当前车辆距离dest的距离
+        //         double curJTODst = sqrt(pow(cjx - dx, 2) + pow(cjy - dy, 2));  //currentJID距离dest的距离
+        //         double nextJTODst = sqrt(pow(njx - dx, 2) + pow(njy - dy, 2)); //nextJID距离dest的距离
 
-                int nowjid=GetNearestJID();
-                int dstjid=nextjid;
-                m_tempjid=nextjid;
-                m_tempjid2=nowjid;
-                //如果接收到数据包的车辆刚好位于路口范围内,则先进行路段间路由为数据包选定下一路由路段
-                if (m_JunAreaTag == true)
-                {
-                    nextHop = IntersectionAreaReliableRouting(dest,fromjid,0); //进入路段间路由算法
-                    if(nextHop!=loopback)
-                    {
-                        dstjid=m_tempjid;
-                        fromjid=m_tempjid2;
-                    }
+        //         int nowjid=GetNearestJID();
+        //         int dstjid=nextjid;
+        //         m_tempjid=nextjid;
+        //         m_tempjid2=nowjid;
+        //         //如果接收到数据包的车辆刚好位于路口范围内,则先进行路段间路由为数据包选定下一路由路段
+        //         if (m_JunAreaTag == true)
+        //         {
+        //             nextHop = IntersectionAreaReliableRouting(dest,fromjid,0); //进入路段间路由算法
+        //             if(nextHop!=loopback)
+        //             {
+        //                 dstjid=m_tempjid;
+        //                 fromjid=m_tempjid2;
+        //             }
                     
 
-                }
-                else
-                {
-                    // if(curJTODst < nextJTODst)
-                    // {
-                    //     dstjid = m_currentJID;
-                    // }
-                    // else
-                    // {
-                    //     dstjid = m_nextJID;
-                    // }
-                    //在路段内路由时，不改变dstjid
-                    dstjid=nextjid;
-                    //dstjid = curJTODst < nextJTODst ? m_currentJID : m_nextJID; //距离dest最近的路口作为dstjid
-                    nextHop = RoadAreaReliableRouting(dest,fromjid, dstjid);
-                }
+        //         }
+        //         else
+        //         {
+        //             // if(curJTODst < nextJTODst)
+        //             // {
+        //             //     dstjid = m_currentJID;
+        //             // }
+        //             // else
+        //             // {
+        //             //     dstjid = m_nextJID;
+        //             // }
+        //             //在路段内路由时，不改变dstjid
+        //             dstjid=nextjid;
+        //             //dstjid = curJTODst < nextJTODst ? m_currentJID : m_nextJID; //距离dest最近的路口作为dstjid
+        //             nextHop = RoadAreaReliableRouting(dest,fromjid, dstjid);
+        //         }
 
-                DataPacketHeader.SetNextJID(dstjid);
-                DataPacketHeader.SetFromJID(fromjid);
-                qentry.m_packet->AddHeader(DataPacketHeader); //加包头
+        //         DataPacketHeader.SetNextJID(dstjid);
+        //         DataPacketHeader.SetFromJID(fromjid);
+        //         qentry.m_packet->AddHeader(DataPacketHeader); //加包头
 
-                if (nextHop == loopback)
-                    m_pwaitqueue.push_back(qentry); //加入等待队列
-                else
-                {
-                    m_wTimeCache.erase(pInfo);
-                    m_squeue.push_back(SendingQueue(qentry.m_packet, qentry.m_header, qentry.m_ucb, nextHop)); //加入到发包队列
-                    // NS_LOG_UNCOND("" << Simulator::Now().GetSeconds() << " " << m_id << " forwards a STORE data packet to " << AddrToID(nextHop));
-                }
-            }
+        //         if (nextHop == loopback)
+        //             m_pwaitqueue.push_back(qentry); //加入等待队列
+        //         else
+        //         {
+        //             m_wTimeCache.erase(pInfo);
+        //             m_squeue.push_back(SendingQueue(qentry.m_packet, qentry.m_header, qentry.m_ucb, nextHop)); //加入到发包队列
+        //             // NS_LOG_UNCOND("" << Simulator::Now().GetSeconds() << " " << m_id << " forwards a STORE data packet to " << AddrToID(nextHop));
+        //         }
+        //     }
 
-            if (m_squeue.empty() == false)
+        //     if (m_squeue.empty() == false)
+        //     {
+        //         SendFromSQueue();
+        //     }
+        // }
+
+
+
+        void
+RoutingProtocol::CheckPacketQueue()
+{
+    m_pqueue.assign(m_pwaitqueue.begin(), m_pwaitqueue.end());
+ 	m_pwaitqueue.clear();
+
+  	while(m_pqueue.empty() == false)
+ 	{
+ 		PacketQueueEntry qentry = m_pqueue.back();
+ 		m_pqueue.pop_back();
+
+ 		Ipv4Address dest = qentry.m_header.GetDestination();
+ 		Ipv4Address origin = qentry.m_header.GetSource();
+
+  		QPacketInfo pInfo(origin, dest);
+ 		QMap::const_iterator pItr = m_wTimeCache.find(pInfo);
+ 		if(pItr != m_wTimeCache.end() && Simulator::Now().GetSeconds() - pItr->second.GetSeconds() >= CarryTimeThreshold )
+ 		{
+ 			NS_LOG_UNCOND("Store time more than: " << CarryTimeThreshold << "s.");
+ 			m_DropPacketTrace(qentry.m_header);
+ 			m_wTimeCache.erase(pInfo);
+ 			continue;
+ 		}
+
+  		grp::DataPacketHeader DataPacketHeader;
+ 		qentry.m_packet->RemoveHeader (DataPacketHeader);
+ 		int nextjid = (int)DataPacketHeader.GetNextJID();
+ 		
+  		Ipv4Address loopback ("127.0.0.1");
+        Ipv4Address nextHop("127.0.0.1");
+
+        if(m_JunAreaTag == true)
+        {
+            nextjid = GetPacketNextJID(true);
+        }
+        else
+        {
+            if(nextjid != m_currentJID && nextjid != m_nextJID)
             {
-                SendFromSQueue();
+                nextjid = GetNearestJID();
             }
         }
+        nextHop = IntraPathRouting(dest, nextjid);
+
+        DataPacketHeader.SetNextJID(nextjid);
+        qentry.m_packet->AddHeader (DataPacketHeader);
+
+  		if(nextHop == loopback)
+ 			m_pwaitqueue.push_back(qentry);
+ 		else
+ 		{
+ 			m_wTimeCache.erase(pInfo);
+ 			m_squeue.push_back(SendingQueue(qentry.m_packet, qentry.m_header, qentry.m_ucb, nextHop));
+ 			// NS_LOG_UNCOND("" << Simulator::Now().GetSeconds() << " " << m_id << " forwards a STORE data packet to " << AddrToID(nextHop));
+
+  		}
+ 	}
+
+  	if(m_squeue.empty() == false)
+ 	{
+ 		SendFromSQueue();
+ 	}
+
+}
+
 
         void
         RoutingProtocol::SendFromSQueue()
@@ -818,74 +886,123 @@ namespace ns3
             m_helloTimer.Schedule(m_helloInterval); //时延
         }
 
-        void
-        RoutingProtocol::CheckPositionExpire()
-        {
+        // void
+        // RoutingProtocol::CheckPositionExpire()
+        // {
 
-            Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>(); //在ns3中,MobilityModel使用一个（笛卡尔）坐标系跟踪位置的演化。mobility模型聚合了ns3::Node对象和使用GetObject<MobilityModel> ()方法查询节点。
-            double cvx = MM->GetPosition().x;
-            double cvy = MM->GetPosition().y;
-            double njx = m_map[m_nextJID].x;
-            double njy = m_map[m_nextJID].y;
-            double cjx = m_map[m_currentJID].x;
-            double cjy = m_map[m_currentJID].y;
+        //     Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>(); //在ns3中,MobilityModel使用一个（笛卡尔）坐标系跟踪位置的演化。mobility模型聚合了ns3::Node对象和使用GetObject<MobilityModel> ()方法查询节点。
+        //     double cvx = MM->GetPosition().x;
+        //     double cvy = MM->GetPosition().y;
+        //     double njx = m_map[m_nextJID].x;
+        //     double njy = m_map[m_nextJID].y;
+        //     double cjx = m_map[m_currentJID].x;
+        //     double cjy = m_map[m_currentJID].y;
 
-            double disToNextJun = sqrt(pow(cvx - njx, 2) + pow(cvy - njy, 2));
-            double disToCurrJun = sqrt(pow(cvx - cjx, 2) + pow(cvy - cjy, 2));
+        //     double disToNextJun = sqrt(pow(cvx - njx, 2) + pow(cvy - njy, 2));
+        //     double disToCurrJun = sqrt(pow(cvx - cjx, 2) + pow(cvy - cjy, 2));
             
-            if (disToNextJun <= PositionCheckThreshold)//小于11米改变路口id并设置转向
-            {
-                m_turn = -1;
-                //用m_lastJID记录车子经过的上一个路口
-                m_lastJID=m_currentJID;
-                m_currentJID = m_nextJID;
+        //     if (disToNextJun <= PositionCheckThreshold)//小于11米改变路口id并设置转向
+        //     {
+        //         m_turn = -1;
+        //         //用m_lastJID记录车子经过的上一个路口
+        //         m_lastJID=m_currentJID;
+        //         m_currentJID = m_nextJID;
 
-                m_nextJID = m_trailTrace.front();
-                m_trailTrace.pop();
+        //         m_nextJID = m_trailTrace.front();
+        //         m_trailTrace.pop();
 
-                m_direction = GetDirection(m_currentJID, m_nextJID);//设置转向
-                //允许在vp值到期之前重新进行道路评估（icar）
-                //仅当车上没有道路评估结果或已经超过有效期之后才发送cp包
-                if(m_RTNSMRS[m_lastJID][m_currentJID].RTNSM_RS==-1||m_RTNSMRS[m_lastJID][m_currentJID].RTNSM_RS==0||(m_RTNSMRS[m_lastJID][m_currentJID].RTNSM_RS_TimeStamp.GetSeconds()+m_RTNSMRS[m_lastJID][m_currentJID].RTNSM_RS_VP<=Simulator::Now().GetSeconds()))
-                {
-                    //车子从i路口驶向j路口，在车子刚刚进入j路口时往i路口发送cp包，即距离路口位置小于11米时发送cp包
-                    //从第10秒开始发，待邻居表基本完善后
-                    if(Simulator::Now().GetSeconds()>10)
-                    {
-                        SendCollectotPaket (m_currentJID,m_lastJID,0);//0代表发送的是cp包而不是cpr
-                    }
+        //         m_direction = GetDirection(m_currentJID, m_nextJID);//设置转向
+        //         //允许在vp值到期之前重新进行道路评估（icar）
+        //         //仅当车上没有道路评估结果或已经超过有效期之后才发送cp包
+        //         if(m_RTNSMRS[m_lastJID][m_currentJID].RTNSM_RS==-1||m_RTNSMRS[m_lastJID][m_currentJID].RTNSM_RS==0||(m_RTNSMRS[m_lastJID][m_currentJID].RTNSM_RS_TimeStamp.GetSeconds()+m_RTNSMRS[m_lastJID][m_currentJID].RTNSM_RS_VP<=Simulator::Now().GetSeconds()))
+        //         {
+        //             //车子从i路口驶向j路口，在车子刚刚进入j路口时往i路口发送cp包，即距离路口位置小于11米时发送cp包
+        //             //从第10秒开始发，待邻居表基本完善后
+        //             if(Simulator::Now().GetSeconds()>10)
+        //             {
+        //                 SendCollectotPaket (m_currentJID,m_lastJID,0);//0代表发送的是cp包而不是cpr
+        //             }
 
-                }
-            }
-            else if (disToNextJun <= turnLightRange)
-            {
-                if (m_turn < 0)
-                    m_turn = m_trailTrace.front();
-            }
+        //         }
+        //     }
+        //     else if (disToNextJun <= turnLightRange)
+        //     {
+        //         if (m_turn < 0)
+        //             m_turn = m_trailTrace.front();
+        //     }
 
-            if (m_JunAreaTag == false)
-            {
-                if (disToNextJun < JunAreaRadius)
-                {
+        //     if (m_JunAreaTag == false)
+        //     {
+        //         if (disToNextJun < JunAreaRadius)
+        //         {
                     
-                    m_JunAreaTag = true;//如果m_JunAreaTag不在路口范围，将其修改为在路口范围，即车辆正在进入路口范围内
-                }
-            }
-            else
-            {
-                if (disToNextJun > JunAreaRadius && disToCurrJun > JunAreaRadius)//两个路口都不靠近
-                {
-                    if(m_JunAreaTag==true)//如果之前m_JunAreaTag为true，将其修改为false，说明车辆正在离开路口范围
-                    {
-                        m_JunAreaTag = false;
+        //             m_JunAreaTag = true;//如果m_JunAreaTag不在路口范围，将其修改为在路口范围，即车辆正在进入路口范围内
+        //         }
+        //     }
+        //     else
+        //     {
+        //         if (disToNextJun > JunAreaRadius && disToCurrJun > JunAreaRadius)//两个路口都不靠近
+        //         {
+        //             if(m_JunAreaTag==true)//如果之前m_JunAreaTag为true，将其修改为false，说明车辆正在离开路口范围
+        //             {
+        //                 m_JunAreaTag = false;
 
-                    }
-                    //m_JunAreaTag = false;
-                }
-            }
+        //             }
+        //             //m_JunAreaTag = false;
+        //         }
+        //     }
 
-            m_positionCheckTimer.Schedule(Seconds(0.1)); //时延,以秒为单位
+        //     m_positionCheckTimer.Schedule(Seconds(0.1)); //时延,以秒为单位
+        // }
+
+        void
+RoutingProtocol::CheckPositionExpire()
+{
+	Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel> ();
+	double cvx = MM->GetPosition ().x;
+	double cvy = MM->GetPosition ().y;
+	double njx = m_map[m_nextJID].x;
+	double njy = m_map[m_nextJID].y;
+	double cjx = m_map[m_currentJID].x;
+	double cjy = m_map[m_currentJID].y;
+	
+	double disToNextJun = sqrt(pow(cvx-njx, 2) + pow(cvy-njy, 2));
+	double disToCurrJun = sqrt(pow(cvx-cjx, 2) + pow(cvy-cjy, 2));
+	if(disToNextJun <= PositionCheckThreshold)
+	{
+		m_turn = -1;
+		m_currentJID = m_nextJID; 
+
+		m_nextJID = m_trailTrace.front();
+		m_trailTrace.pop();
+
+		m_direction = GetDirection(m_currentJID, m_nextJID);
+	}
+	else if(disToNextJun <= turnLightRange)
+	{
+		if(m_turn < 0)
+			m_turn = m_trailTrace.front();
+	}
+
+    if(m_JunAreaTag == false)
+    {
+        if(disToNextJun < JunAreaRadius)
+        {
+            m_JunAreaTag = true;
         }
+    }
+    else
+    {
+        if(disToNextJun > JunAreaRadius && disToCurrJun > JunAreaRadius)
+        {
+            m_JunAreaTag = false;
+        }
+    }
+    
+    m_positionCheckTimer.Schedule(Seconds(0.1));
+}
+
+
 
         void
         RoutingProtocol::SpeedCheckExpire()
@@ -961,52 +1078,88 @@ namespace ns3
             return v;
         }
 
-        void
-        RoutingProtocol::AddHeader(Ptr<Packet> p,Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route)
-        {
-            Ipv4Mask brocastMask("0.0.255.255");  //广播的子网掩码
-            Ipv4Address dest = destination;                                     
-            if (brocastMask.IsMatch(destination, Ipv4Address("0.0.255.255")) == false) //如果两个地址的屏蔽位相等,返回true,如果不等,执行后续程序
-            {
-                Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>();
-                double cx = MM->GetPosition().x;
-                double cy = MM->GetPosition().y;
-                double dx = GetPosition(dest).x;
-                double dy = GetPosition(dest).y;
-                double cjx = m_map[m_currentJID].x;
-                double cjy = m_map[m_currentJID].y;
-                double njx = m_map[m_nextJID].x;
-                double njy = m_map[m_nextJID].y;
-                double curDisToDst = sqrt(pow(cx - dx, 2) + pow(cy - dy, 2));  //当前车辆距离dest的距离
-                double curJTODst = sqrt(pow(cjx - dx, 2) + pow(cjy - dy, 2));  //currentJID距离dest的距离
-                double nextJTODst = sqrt(pow(njx - dx, 2) + pow(njy - dy, 2)); //nextJID距离dest的距离
-                //nextjid为距离MM最近的路口
-                int nextjid;
-                int fromjid;
-                if (curJTODst < nextJTODst)
-                {
-                    nextjid = m_currentJID;
-                    fromjid=m_nextJID;
-                }
-                else
-                {
-                    nextjid = m_nextJID;
-                    fromjid=m_currentJID;
-                }
+        // void
+        // RoutingProtocol::AddHeader(Ptr<Packet> p,Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route)
+        // {
+        //     Ipv4Mask brocastMask("0.0.255.255");  //广播的子网掩码
+        //     Ipv4Address dest = destination;                                     
+        //     if (brocastMask.IsMatch(destination, Ipv4Address("0.0.255.255")) == false) //如果两个地址的屏蔽位相等,返回true,如果不等,执行后续程序
+        //     {
+        //         Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>();
+        //         double cx = MM->GetPosition().x;
+        //         double cy = MM->GetPosition().y;
+        //         double dx = GetPosition(dest).x;
+        //         double dy = GetPosition(dest).y;
+        //         double cjx = m_map[m_currentJID].x;
+        //         double cjy = m_map[m_currentJID].y;
+        //         double njx = m_map[m_nextJID].x;
+        //         double njy = m_map[m_nextJID].y;
+        //         double curDisToDst = sqrt(pow(cx - dx, 2) + pow(cy - dy, 2));  //当前车辆距离dest的距离
+        //         double curJTODst = sqrt(pow(cjx - dx, 2) + pow(cjy - dy, 2));  //currentJID距离dest的距离
+        //         double nextJTODst = sqrt(pow(njx - dx, 2) + pow(njy - dy, 2)); //nextJID距离dest的距离
+        //         //nextjid为距离MM最近的路口
+        //         int nextjid;
+        //         int fromjid;
+        //         if (curJTODst < nextJTODst)
+        //         {
+        //             nextjid = m_currentJID;
+        //             fromjid=m_nextJID;
+        //         }
+        //         else
+        //         {
+        //             nextjid = m_nextJID;
+        //             fromjid=m_currentJID;
+        //         }
 
-                grp::DataPacketHeader Dheader; //定义一个数据包包头
-                Time lut = Simulator::Now();
-                Dheader.SetNextJID(nextjid); //加入下一个路口的id
-                Dheader.SetFromJID(fromjid);
-                std::cout<<Simulator::Now().GetSeconds()<<"车的走向："<<m_currentJID<<"->"<<m_nextJID<<std::endl;
-                std::cout<<Simulator::Now().GetSeconds()<<"m_id"<<m_id<<std::endl;
-                std::cout<<Simulator::Now().GetSeconds()<<"this: "<<nextjid<<std::endl;
+        //         grp::DataPacketHeader Dheader; //定义一个数据包包头
+        //         Time lut = Simulator::Now();
+        //         Dheader.SetNextJID(nextjid); //加入下一个路口的id
+        //         Dheader.SetFromJID(fromjid);
+        //         std::cout<<Simulator::Now().GetSeconds()<<"车的走向："<<m_currentJID<<"->"<<m_nextJID<<std::endl;
+        //         std::cout<<Simulator::Now().GetSeconds()<<"m_id"<<m_id<<std::endl;
+        //         std::cout<<Simulator::Now().GetSeconds()<<"this: "<<nextjid<<std::endl;
                
-                p->AddHeader(Dheader);//packet的addheader函数
-            }
+        //         p->AddHeader(Dheader);//packet的addheader函数
+        //     }
 
-            m_downTarget(p, source, destination, protocol, route); //?
+        //     m_downTarget(p, source, destination, protocol, route); //?
+        // }
+
+        void
+RoutingProtocol::AddHeader (Ptr<Packet> p, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route)
+{
+	Ipv4Mask brocastMask("0.0.255.255");
+	if (brocastMask.IsMatch(destination, Ipv4Address("0.0.255.255")) == false)
+	{
+		Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel> ();
+        double cx = MM->GetPosition ().x;
+        double cy = MM->GetPosition ().y;
+        double cjx = m_map[m_currentJID].x;
+        double cjy = m_map[m_currentJID].y;
+        double njx = m_map[m_nextJID].x;
+        double njy = m_map[m_nextJID].y;
+
+        int nextjid;
+        if(pow(cx-cjx, 2) + pow(cy-cjy, 2) < pow(cx-njx, 2) + pow(cy-njy, 2))
+        {
+            nextjid = m_currentJID;
+        } 
+        else
+        {
+            nextjid = m_nextJID;
         }
+
+        grp::DataPacketHeader Dheader;
+        Time lut = Simulator::Now();
+        Dheader.SetNextJID(nextjid);
+        p->AddHeader (Dheader);
+
+	}
+
+	m_downTarget (p, source, destination, protocol, route);
+
+}
+
 
         bool
         RoutingProtocol::isBetweenSegment(double nx, double ny, int cjid, int djid)
@@ -1092,113 +1245,177 @@ namespace ns3
             return nextHop;//返回下一跳地址
         }
 
-        Ptr<Ipv4Route>
-        RoutingProtocol::RouteOutput(Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) //节点本身有数据包要发送
-        {
-            NS_LOG_FUNCTION(this << " " << m_ipv4->GetObject<Node>()->GetId() << " " << header.GetDestination() << " " << oif); //日志
-            Ptr<Ipv4Route> rtentry = NULL;
-            //原来没有的内容
-            Ptr<Packet> packet = p->Copy();
+        // Ptr<Ipv4Route>
+        // RoutingProtocol::RouteOutput(Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr) //节点本身有数据包要发送
+        // {
+        //     NS_LOG_FUNCTION(this << " " << m_ipv4->GetObject<Node>()->GetId() << " " << header.GetDestination() << " " << oif); //日志
+        //     Ptr<Ipv4Route> rtentry = NULL;
+        //     //原来没有的内容
+        //     Ptr<Packet> packet = p->Copy();
 
-            grp::DataPacketHeader DataPacketHeader;
-            packet->RemoveHeader(DataPacketHeader);
-            //
-            Ipv4Address dest = header.GetDestination();     //获取包头中的目的地址
-            Ipv4Address nextHop = Ipv4Address("127.0.0.1"); //下一跳地址
+        //     grp::DataPacketHeader DataPacketHeader;
+        //     packet->RemoveHeader(DataPacketHeader);
+        //     //
+        //     Ipv4Address dest = header.GetDestination();     //获取包头中的目的地址
+        //     Ipv4Address nextHop = Ipv4Address("127.0.0.1"); //下一跳地址
 
-            Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>();
-            double cx = MM->GetPosition().x;
-            double cy = MM->GetPosition().y;
-            double dx = GetPosition(dest).x;
-            double dy = GetPosition(dest).y;
-            double cjx = m_map[m_currentJID].x;
-            double cjy = m_map[m_currentJID].y;
-            double njx = m_map[m_nextJID].x;
-            double njy = m_map[m_nextJID].y;
-            double curDisToDst = sqrt(pow(cx - dx, 2) + pow(cy - dy, 2));  //当前车辆距离dest的距离
-            double curJTODst = sqrt(pow(cjx - dx, 2) + pow(cjy - dy, 2));  //currentJID距离dest的距离
-            double nextJTODst = sqrt(pow(njx - dx, 2) + pow(njy - dy, 2)); //nextJID距离dest的距离
-            std::cout<<Simulator::Now().GetSeconds()<<curJTODst<<"-"<<nextJTODst<<std::endl;
+        //     Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>();
+        //     double cx = MM->GetPosition().x;
+        //     double cy = MM->GetPosition().y;
+        //     double dx = GetPosition(dest).x;
+        //     double dy = GetPosition(dest).y;
+        //     double cjx = m_map[m_currentJID].x;
+        //     double cjy = m_map[m_currentJID].y;
+        //     double njx = m_map[m_nextJID].x;
+        //     double njy = m_map[m_nextJID].y;
+        //     double curDisToDst = sqrt(pow(cx - dx, 2) + pow(cy - dy, 2));  //当前车辆距离dest的距离
+        //     double curJTODst = sqrt(pow(cjx - dx, 2) + pow(cjy - dy, 2));  //currentJID距离dest的距离
+        //     double nextJTODst = sqrt(pow(njx - dx, 2) + pow(njy - dy, 2)); //nextJID距离dest的距离
+        //     std::cout<<Simulator::Now().GetSeconds()<<curJTODst<<"-"<<nextJTODst<<std::endl;
 
-            int dstjid=-1;
-            int fromjid=-1;
-            if (m_JunAreaTag == false) //如果车辆不在路口范围内,选择距离目的地最近的路口作为目标路口
-            {
-                if(curJTODst < nextJTODst)//如果当前路口距离rsu的距离比下一个路口小，那么当前路口作为tpjid，next路口作为fromjid
-                {
-                    dstjid = m_currentJID;
-                    fromjid=m_nextJID;
-                }
-                else
-                {
-                    dstjid = m_nextJID;
-                    fromjid=m_currentJID;
-                }
-                nextHop = RoadAreaReliableRouting(dest, fromjid,dstjid);//进入路段内路由算法,传入目的地和目标路口id,返回nexthop
-            }
-            else
-            {
-                int nowjid=GetNearestJID();
-                m_tempjid=-1;//一开始发送的时候，nextjid没有初值
-                m_tempjid2=nowjid;
-                nextHop = IntersectionAreaReliableRouting(dest,fromjid,1); //进入路段间路由算法
-                if(nextHop!=Ipv4Address("127.0.0.1"))
-                {
-                    dstjid=m_tempjid;
-                    fromjid=m_tempjid2;
-                }
-            }
-            //
-            std::cout<<Simulator::Now().GetSeconds()<<"m_JunAreaTag: "<<m_JunAreaTag<<std::endl;
-            std::cout<<Simulator::Now().GetSeconds()<<fromjid<<"->"<<dstjid<<std::endl;
-            std::cout<<Simulator::Now().GetSeconds()<<m_id<<"-"<<AddrToID(nextHop)<<"-"<<dstjid<<std::endl;
+        //     int dstjid=-1;
+        //     int fromjid=-1;
+        //     if (m_JunAreaTag == false) //如果车辆不在路口范围内,选择距离目的地最近的路口作为目标路口
+        //     {
+        //         if(curJTODst < nextJTODst)//如果当前路口距离rsu的距离比下一个路口小，那么当前路口作为tpjid，next路口作为fromjid
+        //         {
+        //             dstjid = m_currentJID;
+        //             fromjid=m_nextJID;
+        //         }
+        //         else
+        //         {
+        //             dstjid = m_nextJID;
+        //             fromjid=m_currentJID;
+        //         }
+        //         nextHop = RoadAreaReliableRouting(dest, fromjid,dstjid);//进入路段内路由算法,传入目的地和目标路口id,返回nexthop
+        //     }
+        //     else
+        //     {
+        //         int nowjid=GetNearestJID();
+        //         m_tempjid=-1;//一开始发送的时候，nextjid没有初值
+        //         m_tempjid2=nowjid;
+        //         nextHop = IntersectionAreaReliableRouting(dest,fromjid,1); //进入路段间路由算法
+        //         if(nextHop!=Ipv4Address("127.0.0.1"))
+        //         {
+        //             dstjid=m_tempjid;
+        //             fromjid=m_tempjid2;
+        //         }
+        //     }
+        //     //
+        //     std::cout<<Simulator::Now().GetSeconds()<<"m_JunAreaTag: "<<m_JunAreaTag<<std::endl;
+        //     std::cout<<Simulator::Now().GetSeconds()<<fromjid<<"->"<<dstjid<<std::endl;
+        //     std::cout<<Simulator::Now().GetSeconds()<<m_id<<"-"<<AddrToID(nextHop)<<"-"<<dstjid<<std::endl;
 
-            Ipv4Address loopback("127.0.0.1"); //环回
-            //nextHop = IntraPathRouting(dest, dstjid);//进入路段内路由算法,传入目的地地址和最近路口id,返回nexthop地址
-            //nextHop=RoadAreaReliableRouting(dest,dstjid);//进入路段内路由算法,传入目的地和目标路口id,返回nexthop
-            grp::DataPacketHeader DHeader;
-            DHeader.SetNextJID(dstjid);
-            DHeader.SetSenderID(m_id);
-            DHeader.SetFromJID(fromjid);
-            packet->AddHeader(DHeader);
-            //std::cout<<"验证此时是否插值"<<fromjid<<"->"<<dstjid<<std::endl;
-            if (nextHop == loopback || nextHop == dest || m_JunAreaTag == true) //如果下一跳地址等于lookback或者等于目的地或者在路口范围内
-            {
-                rtentry = Create<Ipv4Route>();
-                rtentry->SetDestination(header.GetDestination());        //设置目标ipv4 address
-                rtentry->SetSource(m_ipv4->GetAddress(1, 0).GetLocal()); //设置源ipv4 address
-                rtentry->SetGateway(loopback);                           //设置网关的下一跳address
-                rtentry->SetOutputDevice(m_ipv4->GetNetDevice(0));       //指向NetDevice的传出数据包的指针
-                sockerr = Socket::ERROR_NOTERROR;
-            }
-            else
-            {
-                rtentry = Create<Ipv4Route>();
-                rtentry->SetDestination(header.GetDestination());
-                Ipv4Address receiverIfaceAddr = m_neiTable.find(nextHop)->second.receiverIfaceAddr;
+        //     Ipv4Address loopback("127.0.0.1"); //环回
+        //     //nextHop = IntraPathRouting(dest, dstjid);//进入路段内路由算法,传入目的地地址和最近路口id,返回nexthop地址
+        //     //nextHop=RoadAreaReliableRouting(dest,dstjid);//进入路段内路由算法,传入目的地和目标路口id,返回nexthop
+        //     grp::DataPacketHeader DHeader;
+        //     DHeader.SetNextJID(dstjid);
+        //     DHeader.SetSenderID(m_id);
+        //     DHeader.SetFromJID(fromjid);
+        //     packet->AddHeader(DHeader);
+        //     //std::cout<<"验证此时是否插值"<<fromjid<<"->"<<dstjid<<std::endl;
+        //     if (nextHop == loopback || nextHop == dest || m_JunAreaTag == true) //如果下一跳地址等于lookback或者等于目的地或者在路口范围内
+        //     {
+        //         rtentry = Create<Ipv4Route>();
+        //         rtentry->SetDestination(header.GetDestination());        //设置目标ipv4 address
+        //         rtentry->SetSource(m_ipv4->GetAddress(1, 0).GetLocal()); //设置源ipv4 address
+        //         rtentry->SetGateway(loopback);                           //设置网关的下一跳address
+        //         rtentry->SetOutputDevice(m_ipv4->GetNetDevice(0));       //指向NetDevice的传出数据包的指针
+        //         sockerr = Socket::ERROR_NOTERROR;
+        //     }
+        //     else
+        //     {
+        //         rtentry = Create<Ipv4Route>();
+        //         rtentry->SetDestination(header.GetDestination());
+        //         Ipv4Address receiverIfaceAddr = m_neiTable.find(nextHop)->second.receiverIfaceAddr;
 
-                rtentry->SetSource(receiverIfaceAddr);
-                rtentry->SetGateway(nextHop);
-                for (uint32_t i = 0; i < m_ipv4->GetNInterfaces(); i++) //GetNInterfaces返回用户添加的接口数目
-                {
-                    for (uint32_t j = 0; j < m_ipv4->GetNAddresses(i); j++) //传入接口号,GetNAddresses返回接口的Ipv4InterfaceAddress条目数
-                    {
-                        if (m_ipv4->GetAddress(i, j).GetLocal() == receiverIfaceAddr) //返回与接口和addressIndex关联的Ipv4InterfaceAddress
-                        {
-                            rtentry->SetOutputDevice(m_ipv4->GetNetDevice(i));
-                            break;
-                        }
-                    }
-                }
-                //
+        //         rtentry->SetSource(receiverIfaceAddr);
+        //         rtentry->SetGateway(nextHop);
+        //         for (uint32_t i = 0; i < m_ipv4->GetNInterfaces(); i++) //GetNInterfaces返回用户添加的接口数目
+        //         {
+        //             for (uint32_t j = 0; j < m_ipv4->GetNAddresses(i); j++) //传入接口号,GetNAddresses返回接口的Ipv4InterfaceAddress条目数
+        //             {
+        //                 if (m_ipv4->GetAddress(i, j).GetLocal() == receiverIfaceAddr) //返回与接口和addressIndex关联的Ipv4InterfaceAddress
+        //                 {
+        //                     rtentry->SetOutputDevice(m_ipv4->GetNetDevice(i));
+        //                     break;
+        //                 }
+        //             }
+        //         }
+        //         //
                 
-                //
+        //         //
 
-                sockerr = Socket::ERROR_NOTERROR;
+        //         sockerr = Socket::ERROR_NOTERROR;
+        //     }
+        //     return rtentry;
+        // }
+
+
+Ptr<Ipv4Route>
+RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header, Ptr<NetDevice> oif, Socket::SocketErrno &sockerr)
+{
+	NS_LOG_FUNCTION (this << " " << m_ipv4->GetObject<Node> ()->GetId () << " " << header.GetDestination () << " " << oif);
+	Ptr<Ipv4Route> rtentry = NULL;
+
+	Ipv4Address dest = header.GetDestination ();
+	Ipv4Address nextHop = Ipv4Address("127.0.0.1");
+
+    Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel> ();
+    double cx = MM->GetPosition ().x;
+    double cy = MM->GetPosition ().y;
+    double cjx = m_map[m_currentJID].x;
+    double cjy = m_map[m_currentJID].y;
+    double njx = m_map[m_nextJID].x;
+    double njy = m_map[m_nextJID].y;
+
+    int dstjid;
+    if(m_JunAreaTag == false)
+    {
+        dstjid = pow(cx-cjx, 2) + pow(cy-cjy, 2) < pow(cx-njx, 2) + pow(cy-njy, 2)? m_currentJID:m_nextJID;
+    }
+    else
+    {
+        dstjid = GetPacketNextJID(true);
+    }
+
+    Ipv4Address loopback ("127.0.0.1");
+    nextHop = IntraPathRouting(dest, dstjid);
+    if(nextHop == loopback || nextHop == dest || m_JunAreaTag == true)
+    {
+        rtentry = Create<Ipv4Route> ();
+        rtentry->SetDestination (header.GetDestination ());
+        rtentry->SetSource (m_ipv4->GetAddress (1, 0).GetLocal ());
+        rtentry->SetGateway (loopback);
+        rtentry->SetOutputDevice (m_ipv4->GetNetDevice (0));
+        sockerr = Socket::ERROR_NOTERROR;
+    }
+    else
+    {
+        rtentry = Create<Ipv4Route> ();
+        rtentry->SetDestination (header.GetDestination ());
+        Ipv4Address receiverIfaceAddr = m_neiTable.find(nextHop)->second.receiverIfaceAddr;
+            
+        rtentry->SetSource (receiverIfaceAddr);
+        rtentry->SetGateway (nextHop);
+        for (uint32_t i = 0; i < m_ipv4->GetNInterfaces (); i++)
+        {
+            for (uint32_t j = 0; j < m_ipv4->GetNAddresses (i); j++)
+            {
+                if (m_ipv4->GetAddress (i,j).GetLocal () == receiverIfaceAddr)
+                {
+                    rtentry->SetOutputDevice (m_ipv4->GetNetDevice (i));
+                    break;
+                }
             }
-            return rtentry;
         }
 
+        sockerr = Socket::ERROR_NOTERROR;
+
+    }
+	return rtentry;
+}
         int
         RoutingProtocol::DijkstraAlgorithm(int srcjid, int dstjid)
         {
@@ -1283,182 +1500,312 @@ namespace ns3
             return nextjid;
         }
 
-        bool RoutingProtocol::RouteInput(Ptr<const Packet> p,
-                                         const Ipv4Header &header, Ptr<const NetDevice> idev,
-                                         UnicastForwardCallback ucb, MulticastForwardCallback mcb,
-                                         LocalDeliverCallback lcb, ErrorCallback ecb)
+
+bool RoutingProtocol::RouteInput  (Ptr<const Packet> p,
+                                   const Ipv4Header &header, Ptr<const NetDevice> idev,
+                                   UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+                                   LocalDeliverCallback lcb, ErrorCallback ecb)
+{
+	NS_LOG_FUNCTION (this << " " << m_ipv4->GetObject<Node> ()->GetId () << " " << header.GetDestination ());
+
+	Ipv4Address dest = header.GetDestination ();
+    Ipv4Address origin = header.GetSource ();
+
+	NS_ASSERT (m_ipv4->GetInterfaceForDevice (idev) >= 0);
+	uint32_t iif = m_ipv4->GetInterfaceForDevice (idev);
+	if (m_ipv4->IsDestinationAddress (dest, iif))
+	{
+		if (!lcb.IsNull ())
+		{
+			NS_LOG_LOGIC ("Local delivery to " << dest);
+			lcb (p, header, iif);
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+    //判断当前数据包的TTL是否还存活
+	if(header.GetTtl() <= 1)
+	{
+		NS_LOG_UNCOND("TTL < 0");
+		m_DropPacketTrace(header);
+		return true;
+	}
+
+	Ptr<Ipv4Route> rtentry;
+	Ipv4Address loopback ("127.0.0.1");
+	Ptr<Packet> packet = p->Copy ();
+	grp::DataPacketHeader DataPacketHeader;
+	packet->RemoveHeader (DataPacketHeader);
+	int nextjid = (int)DataPacketHeader.GetNextJID();
+    int senderID = DataPacketHeader.GetSenderID();
+
+    //如果接收到数据包的车辆刚好位于路口范围内，则先进行路段间路由为数据包选定下一路由路段
+    if(m_JunAreaTag == true)
+    {
+        nextjid = GetPacketNextJID(true);
+        NS_LOG_UNCOND("JID: " << (int)DataPacketHeader.GetNextJID() << "->" << nextjid);
+        NS_LOG_UNCOND("");
+    }
+
+    //路段内路由，为数据包选定下一跳节点
+	Ipv4Address nextHop = IntraPathRouting(dest, nextjid);
+
+	NS_LOG_UNCOND("" << Simulator::Now().GetSeconds() << " " << m_id << "->" << AddrToID(nextHop));
+
+	if (nextHop != loopback)
+	{
+        //若返回了下一跳的地址，则将该数据包转发给该下一跳节点
+        if(senderID != AddrToID(nextHop))
         {
-            NS_LOG_FUNCTION(this << " " << m_ipv4->GetObject<Node>()->GetId() << " " << header.GetDestination());
+            rtentry = Create<Ipv4Route> ();
+            rtentry->SetDestination (header.GetDestination ());
+            Ipv4Address receiverIfaceAddr = m_neiTable.find(nextHop)->second.receiverIfaceAddr;
 
-            Ipv4Address dest = header.GetDestination();
-            Ipv4Address origin = header.GetSource();
-            
-            
+            if(nextHop == dest)
+                receiverIfaceAddr = m_mainAddress;
 
+            rtentry->SetSource (receiverIfaceAddr);
+            rtentry->SetGateway (nextHop);
 
-            NS_ASSERT(m_ipv4->GetInterfaceForDevice(idev) >= 0);
-            uint32_t iif = m_ipv4->GetInterfaceForDevice(idev);
-            if (m_ipv4->IsDestinationAddress(dest, iif))
+            for (uint32_t i = 0; i < m_ipv4->GetNInterfaces (); i++)
             {
-                if (!lcb.IsNull())
+                for (uint32_t j = 0; j < m_ipv4->GetNAddresses (i); j++)
                 {
-                    NS_LOG_LOGIC("Local delivery to " << dest);
-                    lcb(p, header, iif);
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            //判断当前数据包的TTL是否还存活
-            if (header.GetTtl() <= 1)
-            {
-                NS_LOG_UNCOND("TTL < 0");
-                m_DropPacketTrace(header);
-                return true;
-            }
-
-            Ptr<Ipv4Route> rtentry;
-            
-            Ipv4Address nextHop = Ipv4Address("127.0.0.1"); //新加
-            Ipv4Address loopback("127.0.0.1");
-            Ptr<Packet> packet = p->Copy();
-            grp::DataPacketHeader DataPacketHeader;
-            packet->RemoveHeader(DataPacketHeader);
-            int nextjid = (int)DataPacketHeader.GetNextJID();
-            int senderID = DataPacketHeader.GetSenderID();
-            int fromjid=(int)DataPacketHeader.GetFromJID();//获取数据包上一个路口的ID
-            //
-            Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>();
-            double cx = MM->GetPosition().x;
-            double cy = MM->GetPosition().y;
-            double dx = GetPosition(dest).x;
-            double dy = GetPosition(dest).y;
-            double cjx = m_map[m_currentJID].x;
-            double cjy = m_map[m_currentJID].y;
-            double njx = m_map[m_nextJID].x;
-            double njy = m_map[m_nextJID].y;
-            double curDisToDst = sqrt(pow(cx - dx, 2) + pow(cy - dy, 2));  //当前车辆距离dest的距离
-            double curJTODst = sqrt(pow(cjx - dx, 2) + pow(cjy - dy, 2));  //currentJID距离dest的距离
-            double nextJTODst = sqrt(pow(njx - dx, 2) + pow(njy - dy, 2)); //nextJID距离dest的距离
-
-            int nowjid=GetNearestJID();
-            m_tempjid=nextjid;
-            m_tempjid2=nowjid;
-            int dstjid=nextjid;//初始化为nextjid
-            //int lastjid=fromjid;
-            //如果接收到数据包的车辆刚好位于路口范围内,则先进行路段间路由为数据包选定下一路由路段
-            if (m_JunAreaTag == true)
-            {
-                //int ctjid=nextjid;
-                std::cout<<Simulator::Now().GetSeconds()<<"进入路段间路由算法之前的fromjid"<<fromjid<<std::endl;
-                nextHop = IntersectionAreaReliableRouting(dest,fromjid,1); //进入路段间路由算法
-                //判断nextHop所对应的
-                if(nextHop!=loopback)//成功找到下一跳才改       
-                {
-                   dstjid=m_tempjid;
-                   fromjid=m_tempjid2;
-                }
-                
-            }
-            else
-            {
-                dstjid=nextjid;
-                //dstjid = curJTODst < nextJTODst ? m_currentJID : m_nextJID; //距离dest最近的路口作为dstjid
-                nextHop = RoadAreaReliableRouting(dest, fromjid,dstjid);
-            }
-
-            //路段内路由,为数据包选定下一跳节点
-            //Ipv4Address nextHop = IntraPathRouting(dest, nextjid);
-
-            std::cout<<Simulator::Now().GetSeconds()<<"m_JunAreaTag"<<m_JunAreaTag<<std::endl;
-            std::cout<<Simulator::Now().GetSeconds()<<"nowjid"<<nowjid<<std::endl;
-            //std::cout<<"01道路得分"<<m_RTNSMRS[0][1].RTNSM_RS<<std::endl;
-            //std::cout<<"05道路得分"<<m_RTNSMRS[0][5].RTNSM_RS<<std::endl;
-            std::cout<<Simulator::Now().GetSeconds()<<"nextjid:"<<nextjid<<std::endl;
-            std::cout<<Simulator::Now().GetSeconds()<<"m_tempjid:"<<m_tempjid<<std::endl;
-            std::cout<<Simulator::Now().GetSeconds()<<fromjid<<"->"<<dstjid<<std::endl;
-            std::cout<<Simulator::Now().GetSeconds()<<m_id<<"-"<<AddrToID(nextHop)<<"-"<<dstjid<<std::endl;
-
-            NS_LOG_UNCOND("" << Simulator::Now().GetSeconds() << " " << m_id << "->" << AddrToID(nextHop));
-
-            if (nextHop != loopback)
-            {
-                //若返回了下一跳的地址,则将该数据包转发给该下一跳节点
-                if (senderID != AddrToID(nextHop))
-                {
-                    rtentry = Create<Ipv4Route>();
-                    rtentry->SetDestination(header.GetDestination());
-                    Ipv4Address receiverIfaceAddr = m_neiTable.find(nextHop)->second.receiverIfaceAddr;
-
-                    if (nextHop == dest)
-                        receiverIfaceAddr = m_mainAddress;
-
-                    rtentry->SetSource(receiverIfaceAddr);
-                    rtentry->SetGateway(nextHop);
-
-                    for (uint32_t i = 0; i < m_ipv4->GetNInterfaces(); i++)
+                    if (m_ipv4->GetAddress (i,j).GetLocal () == receiverIfaceAddr)
                     {
-                        for (uint32_t j = 0; j < m_ipv4->GetNAddresses(i); j++)
-                        {
-                            if (m_ipv4->GetAddress(i, j).GetLocal() == receiverIfaceAddr)
-                            {
-                                rtentry->SetOutputDevice(m_ipv4->GetNetDevice(i));
-                                break;
-                            }
-                        }
+                        rtentry->SetOutputDevice (m_ipv4->GetNetDevice (i));
+                        break;
                     }
-
-                    if (nextHop != header.GetDestination())
-                    {
-                        grp::DataPacketHeader DHeader;
-                        DHeader.SetNextJID(dstjid);
-                        DHeader.SetSenderID(m_id);
-                        DHeader.SetFromJID(fromjid);
-                        packet->AddHeader(DHeader);
-                    }
-
-                    ucb(rtentry, packet, header); //通过ucb发包
-                }
-                else
-                {
-                    //如果下一跳是自己的上一跳,则可能出现了路由回路,可能导致TTL的快速消耗,故暂缓发送数据包
-                    grp::DataPacketHeader DHeader;
-                    DHeader.SetNextJID(dstjid);
-                    DHeader.SetSenderID(m_id);
-                    DHeader.SetFromJID(fromjid);
-                    packet->AddHeader(DHeader);
-                    DelayPacketQueueEntry qentry(packet, header, ucb, nextHop);
-                    m_delayqueue.push_back(qentry);
-                    Simulator::Schedule(m_helloInterval / 4, &RoutingProtocol::SendFromDelayQueue, this);
                 }
             }
-            else
+
+            if(nextHop != header.GetDestination())
             {
-                //如果返回的IPv4地址为127.0.0.1,则说明当前时刻没有合适的下一跳节点
-                //节点启用Carry_and_forward机制,将数据包暂时缓存起来,直到有可用下一跳节点或信息过期为止
                 grp::DataPacketHeader DHeader;
-                DHeader.SetNextJID(dstjid);
+                DHeader.SetNextJID(nextjid);
                 DHeader.SetSenderID(m_id);
-                DHeader.SetFromJID(fromjid);
                 packet->AddHeader(DHeader);
-
-                QPacketInfo pInfo(origin, dest);
-                QMap::const_iterator pItr = m_wTimeCache.find(pInfo);
-                if (pItr == m_wTimeCache.end())
-                {
-                    Time &pTime = m_wTimeCache[pInfo];
-                    pTime = Simulator::Now();
-                }
-
-                PacketQueueEntry qentry(packet, header, ucb);
-                m_pwaitqueue.push_back(qentry);
-                m_StorePacketTrace(header);
             }
-            return true;
+
+            ucb (rtentry, packet, header);
         }
+        else
+        {
+            //如果下一跳是自己的上一跳，则可能出现了路由回路，可能导致TTL的快速消耗，故暂缓发送数据包
+            grp::DataPacketHeader DHeader;
+            DHeader.SetNextJID(nextjid);
+            DHeader.SetSenderID(m_id);		
+            packet->AddHeader(DHeader);
+            DelayPacketQueueEntry qentry(packet, header, ucb, nextHop);		
+  		    m_delayqueue.push_back(qentry);	
+            Simulator::Schedule(m_helloInterval / 4, &RoutingProtocol::SendFromDelayQueue, this);
+        }	
+	}
+	else
+	{
+        //如果返回的IPv4地址为127.0.0.1，则说明当前时刻没有合适的下一跳节点
+        //节点启用Carry_and_forward机制，将数据包暂时缓存起来，直到有可用下一跳节点或信息过期为止
+        grp::DataPacketHeader DHeader;
+  		DHeader.SetNextJID(nextjid);	
+        DHeader.SetSenderID(m_id);	
+  		packet->AddHeader(DHeader);		
+
+    	QPacketInfo pInfo(origin, dest);		
+  		QMap::const_iterator pItr = m_wTimeCache.find(pInfo);		
+  		if(pItr == m_wTimeCache.end())		
+  		{		
+  			Time &pTime = m_wTimeCache[pInfo];		
+  			pTime = Simulator::Now();		
+  		}		
+
+    	PacketQueueEntry qentry(packet, header, ucb);		
+  		m_pwaitqueue.push_back(qentry);		
+  		m_StorePacketTrace(header);
+	}
+	return true;
+}
+
+        // bool RoutingProtocol::RouteInput(Ptr<const Packet> p,
+        //                                  const Ipv4Header &header, Ptr<const NetDevice> idev,
+        //                                  UnicastForwardCallback ucb, MulticastForwardCallback mcb,
+        //                                  LocalDeliverCallback lcb, ErrorCallback ecb)
+        // {
+        //     NS_LOG_FUNCTION(this << " " << m_ipv4->GetObject<Node>()->GetId() << " " << header.GetDestination());
+
+        //     Ipv4Address dest = header.GetDestination();
+        //     Ipv4Address origin = header.GetSource();
+            
+            
+
+
+        //     NS_ASSERT(m_ipv4->GetInterfaceForDevice(idev) >= 0);
+        //     uint32_t iif = m_ipv4->GetInterfaceForDevice(idev);
+        //     if (m_ipv4->IsDestinationAddress(dest, iif))
+        //     {
+        //         if (!lcb.IsNull())
+        //         {
+        //             NS_LOG_LOGIC("Local delivery to " << dest);
+        //             lcb(p, header, iif);
+        //             return true;
+        //         }
+        //         else
+        //         {
+        //             return false;
+        //         }
+        //     }
+
+        //     //判断当前数据包的TTL是否还存活
+        //     if (header.GetTtl() <= 1)
+        //     {
+        //         NS_LOG_UNCOND("TTL < 0");
+        //         m_DropPacketTrace(header);
+        //         return true;
+        //     }
+
+        //     Ptr<Ipv4Route> rtentry;
+            
+        //     Ipv4Address nextHop = Ipv4Address("127.0.0.1"); //新加
+        //     Ipv4Address loopback("127.0.0.1");
+        //     Ptr<Packet> packet = p->Copy();
+        //     grp::DataPacketHeader DataPacketHeader;
+        //     packet->RemoveHeader(DataPacketHeader);
+        //     int nextjid = (int)DataPacketHeader.GetNextJID();
+        //     int senderID = DataPacketHeader.GetSenderID();
+        //     int fromjid=(int)DataPacketHeader.GetFromJID();//获取数据包上一个路口的ID
+        //     //
+        //     Ptr<MobilityModel> MM = m_ipv4->GetObject<MobilityModel>();
+        //     double cx = MM->GetPosition().x;
+        //     double cy = MM->GetPosition().y;
+        //     double dx = GetPosition(dest).x;
+        //     double dy = GetPosition(dest).y;
+        //     double cjx = m_map[m_currentJID].x;
+        //     double cjy = m_map[m_currentJID].y;
+        //     double njx = m_map[m_nextJID].x;
+        //     double njy = m_map[m_nextJID].y;
+        //     double curDisToDst = sqrt(pow(cx - dx, 2) + pow(cy - dy, 2));  //当前车辆距离dest的距离
+        //     double curJTODst = sqrt(pow(cjx - dx, 2) + pow(cjy - dy, 2));  //currentJID距离dest的距离
+        //     double nextJTODst = sqrt(pow(njx - dx, 2) + pow(njy - dy, 2)); //nextJID距离dest的距离
+
+        //     int nowjid=GetNearestJID();
+        //     m_tempjid=nextjid;
+        //     m_tempjid2=nowjid;
+        //     int dstjid=nextjid;//初始化为nextjid
+        //     //int lastjid=fromjid;
+        //     //如果接收到数据包的车辆刚好位于路口范围内,则先进行路段间路由为数据包选定下一路由路段
+        //     if (m_JunAreaTag == true)
+        //     {
+        //         //int ctjid=nextjid;
+        //         std::cout<<Simulator::Now().GetSeconds()<<"进入路段间路由算法之前的fromjid"<<fromjid<<std::endl;
+        //         nextHop = IntersectionAreaReliableRouting(dest,fromjid,1); //进入路段间路由算法
+
+        //         //判断nextHop所对应的
+        //         if(nextHop!=loopback)//成功找到下一跳才改       
+        //         {
+        //            dstjid=m_tempjid;
+        //            fromjid=m_tempjid2;
+        //         }
+                
+        //     }
+        //     else
+        //     {
+        //         dstjid=nextjid;
+        //         //dstjid = curJTODst < nextJTODst ? m_currentJID : m_nextJID; //距离dest最近的路口作为dstjid
+        //         nextHop = RoadAreaReliableRouting(dest, fromjid,dstjid);
+        //     }
+
+        //     //路段内路由,为数据包选定下一跳节点
+        //     //Ipv4Address nextHop = IntraPathRouting(dest, nextjid);
+
+        //     std::cout<<Simulator::Now().GetSeconds()<<"m_JunAreaTag"<<m_JunAreaTag<<std::endl;
+        //     std::cout<<Simulator::Now().GetSeconds()<<"nowjid"<<nowjid<<std::endl;
+        //     //std::cout<<"01道路得分"<<m_RTNSMRS[0][1].RTNSM_RS<<std::endl;
+        //     //std::cout<<"05道路得分"<<m_RTNSMRS[0][5].RTNSM_RS<<std::endl;
+        //     std::cout<<Simulator::Now().GetSeconds()<<"nextjid:"<<nextjid<<std::endl;
+        //     std::cout<<Simulator::Now().GetSeconds()<<"m_tempjid:"<<m_tempjid<<std::endl;
+        //     std::cout<<Simulator::Now().GetSeconds()<<fromjid<<"->"<<dstjid<<std::endl;
+        //     std::cout<<Simulator::Now().GetSeconds()<<m_id<<"-"<<AddrToID(nextHop)<<"-"<<dstjid<<std::endl;
+
+        //     NS_LOG_UNCOND("" << Simulator::Now().GetSeconds() << " " << m_id << "->" << AddrToID(nextHop));
+
+        //     if (nextHop != loopback)
+        //     {
+        //         //若返回了下一跳的地址,则将该数据包转发给该下一跳节点
+        //         if (senderID != AddrToID(nextHop))
+        //         {
+        //             rtentry = Create<Ipv4Route>();
+        //             rtentry->SetDestination(header.GetDestination());
+        //             Ipv4Address receiverIfaceAddr = m_neiTable.find(nextHop)->second.receiverIfaceAddr;
+
+        //             if (nextHop == dest)
+        //                 receiverIfaceAddr = m_mainAddress;
+
+        //             rtentry->SetSource(receiverIfaceAddr);
+        //             rtentry->SetGateway(nextHop);
+
+        //             for (uint32_t i = 0; i < m_ipv4->GetNInterfaces(); i++)
+        //             {
+        //                 for (uint32_t j = 0; j < m_ipv4->GetNAddresses(i); j++)
+        //                 {
+        //                     if (m_ipv4->GetAddress(i, j).GetLocal() == receiverIfaceAddr)
+        //                     {
+        //                         rtentry->SetOutputDevice(m_ipv4->GetNetDevice(i));
+        //                         break;
+        //                     }
+        //                 }
+        //             }
+
+        //             if (nextHop != header.GetDestination())
+        //             {
+        //                 grp::DataPacketHeader DHeader;
+        //                 DHeader.SetNextJID(dstjid);
+        //                 DHeader.SetSenderID(m_id);
+        //                 DHeader.SetFromJID(fromjid);
+        //                 packet->AddHeader(DHeader);
+        //             }
+
+        //             ucb(rtentry, packet, header); //通过ucb发包
+        //         }
+        //         else
+        //         {
+        //             //如果下一跳是自己的上一跳,则可能出现了路由回路,可能导致TTL的快速消耗,故暂缓发送数据包
+        //             grp::DataPacketHeader DHeader;
+        //             DHeader.SetNextJID(dstjid);
+        //             DHeader.SetSenderID(m_id);
+        //             DHeader.SetFromJID(fromjid);
+        //             packet->AddHeader(DHeader);
+        //             DelayPacketQueueEntry qentry(packet, header, ucb, nextHop);
+        //             m_delayqueue.push_back(qentry);
+        //             Simulator::Schedule(m_helloInterval / 4, &RoutingProtocol::SendFromDelayQueue, this);
+        //         }
+        //     }
+        //     else
+        //     {
+        //         //如果返回的IPv4地址为127.0.0.1,则说明当前时刻没有合适的下一跳节点
+        //         //节点启用Carry_and_forward机制,将数据包暂时缓存起来,直到有可用下一跳节点或信息过期为止
+        //         grp::DataPacketHeader DHeader;
+        //         DHeader.SetNextJID(dstjid);
+        //         DHeader.SetSenderID(m_id);
+        //         DHeader.SetFromJID(fromjid);
+        //         packet->AddHeader(DHeader);
+
+        //         QPacketInfo pInfo(origin, dest);
+        //         QMap::const_iterator pItr = m_wTimeCache.find(pInfo);
+        //         if (pItr == m_wTimeCache.end())
+        //         {
+        //             Time &pTime = m_wTimeCache[pInfo];
+        //             pTime = Simulator::Now();
+        //         }
+
+        //         PacketQueueEntry qentry(packet, header, ucb);
+        //         m_pwaitqueue.push_back(qentry);
+        //         m_StorePacketTrace(header);
+        //     }
+        //     return true;
+        // }
 
         void
         RoutingProtocol::NotifyInterfaceUp(uint32_t i)

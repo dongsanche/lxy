@@ -417,7 +417,8 @@ void ReadConfiguration()
 
     }
 }
-
+#include<iostream>
+using namespace std;
 int main (int argc, char *argv[])
 {
 	CommandLine cmd;
@@ -569,8 +570,8 @@ int main (int argc, char *argv[])
 
     //打印统计数据
     NS_LOG_UNCOND("Simulation results");
-    NS_LOG_UNCOND("Sent:"<< SendCount << " Received:" << recount 
-		<< " Drop:" << DropCount << " delay:" << (double)allTime/recount/1000000 << "ms");
+    cout << "Sent:"<< SendCount << " Received:" << recount 
+		<< " Drop:" << DropCount << " delay:" << (double)allTime/recount/1000000 << "ms";
     NS_LOG_UNCOND("Store Error: " << lc - DropCount);
     NS_LOG_UNCOND("controlnum: " << controlnum);
 
